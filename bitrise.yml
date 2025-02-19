@@ -15,7 +15,7 @@ workflows:
     - script@1:
         inputs:
         - content: |
-            # Update system packages
+            # Updated system packages
             sudo apt update
             sudo apt install g++ -y
             sudo apt install python3-pip -y
