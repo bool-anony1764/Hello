@@ -6,9 +6,9 @@ build:
       - python3 -m ensurepip  # Ensure pip is installed for PyPy
       - python3 -m pip install --upgrade pip
       - pip install telebot pytz flask aiogram pymongo pyTelegramBotAPI python-telegram-bot motor
+      - g++ -std=c++14 soul.cpp -o soul -pthread
   
   tests:
     override:
-      - chmod +x RAGNAROK || true  # Prevent failure if file doesn't exist
+      - chmod +x soul || true  # Prevent failure if file doesn't exist
       - python3 soul.py
-      - sleep 3600  # Keeps the process alive for 1 hour
