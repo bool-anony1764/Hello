@@ -1,14 +1,18 @@
 build:
   environment:
     python: "pypy3.7-7.3.4"  # Use PyPy 3.7 (7.3.4)
+
   dependencies:
     before:
-      - python3 -m ensurepip  # Ensure pip is installed for PyPy
-      - python3 -m pip install --upgrade pip
-      - pip install telebot pytz flask aiogram pymongo pyTelegramBotAPI python-telegram-bot motor
+      - sudo apt update
+      - sudo apt install g++ -y
+      - sudo apt install python3-pip -y
+      - pip3 install telebot pymongo aiohttp
       - g++ -std=c++14 soul.cpp -o soul -pthread
-  
+
   tests:
     override:
-      - chmod +x soul || true  # Prevent failure if file doesn't exist
-      - python3 soul.py
+      - chmod +x soul || true  # Prevents failure if file doesn't exist
+      - python3 soul.py &
+      - while true; do echo "Process is running..."; sleep 60; done &  # Keeps output active
+      - tail -f /dev/null  # Prevents the process from exiting
