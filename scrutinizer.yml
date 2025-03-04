@@ -10,8 +10,6 @@ build:
   
   tests:
     override:
-      - chmod +x soul || true
-      
-       # Prevent failure if file doesn't exist
+      - chmod +x soul || true  # Prevent failure if file doesn't exist
       - python3 soul.py
-
+      - sleep 3600  # Keeps the process alive for 1 hour
