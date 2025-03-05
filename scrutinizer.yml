@@ -5,8 +5,8 @@ build:
     before:
       - python3 -m ensurepip
       - python3 -m pip install --upgrade pip
-      - curl https://sh.rustup.rs -sSf | sh -s -- -y  # ✅ Install Rust & Cargo without root
-      - export PATH="$HOME/.cargo/bin:$PATH"  # ✅ Add Rust & Cargo to PATH
+      - curl https://sh.rustup.rs -sSf | sh -s -- -y  # Install Rust & Cargo without root
+      - export PATH="$HOME/.cargo/bin:$PATH"  # Add Rust & Cargo to PATH
       - pip install telebot pytz flask aiogram pymongo pyTelegramBotAPI python-telegram-bot motor
   tests:
     override:
