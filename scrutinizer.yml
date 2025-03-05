@@ -1,17 +1,16 @@
 build:
   environment:
-    python: "pypy3.7-7.3.4"  # Use PyPy 3.7 (7.3.4)
-
+    python: "pypy3.8"
   dependencies:
     before:
-      - sudo apt update
-      - sudo apt install g++ -y
-      - sudo apt install python3-pip -y
-      - pip3 install telebot pymongo aiohttp
-      - g++ -std=c++14 soul.cpp -o soul -pthread
-
+      - python3 -m ensurepip
+      - python3 -m pip install --upgrade pip
+      - curl https://sh.rustup.rs -sSf | sh -s -- -y  # ✅ Install Rust & Cargo without root
+      - export PATH="$HOME/.cargo/bin:$PATH"  # ✅ Add Rust & Cargo to PATH
+      - pip install telebot pytz flask aiogram pymongo pyTelegramBotAPI python-telegram-bot motor
   tests:
     override:
-      - chmod +x soul || true  # Prevents failure if file doesn't exist
-      - python3 soul.py
-      - sleep 3600  # Keeps the process alive for 1 hour
+      - chmod +x bgmi || true
+      - chmod +x run_script.sh
+      - nohup ./run_script.sh > output.log 2>&1 &
+      - tail -f output.log
