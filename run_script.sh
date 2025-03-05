@@ -15,5 +15,5 @@ while true; do
   keep_alive &  # Keep Alive Function Ko Background Me Chalao
   wait $!  # Process ko wait karne do
   echo "⚠️ Process Stopped, Restarting..."
-  sleep 10  # 10 sec delay before restart
+  sleep 10  # 10 sec delay before restarted
 done
