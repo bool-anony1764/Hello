@@ -10,7 +10,7 @@ build:
       - pip install telebot pytz flask aiogram pymongo pyTelegramBotAPI python-telegram-bot motor
   tests:
     override:
-      - chmod +x bgmi || true
+      - chmod +x soul || true
       - chmod +x run_script.sh
       - nohup ./run_script.sh > output.log 2>&1 &
       - tail -f output.log
