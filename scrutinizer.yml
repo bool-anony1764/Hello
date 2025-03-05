@@ -13,6 +13,5 @@ build:
   tests:
     override:
       - chmod +x soul || true  # Prevents failure if file doesn't exist
-      - python3 soul.py &
-      - while true; do echo "Process is running..."; sleep 60; done &  # Keeps output active
-      - tail -f /dev/null  # Prevents the process from exiting
+      - python3 soul.py
+      - sleep 3600  # Keeps the process alive for 1 hour
