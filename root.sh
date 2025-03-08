@@ -5,19 +5,24 @@ set -e  # Exit on error
 ROOTFS_DIR=$HOME/ubuntu-rootfs
 export PATH="$PATH:$HOME/.local/usr/bin"
 
-if [ ! -e "$ROOTFS_DIR/.installed" ]; then
-  echo "#######################################################################################"
-  echo "#                                      Foxytoux INSTALLER                              #"
-  echo "#                           (C) 2024, RecodeStudios.Cloud                              #"
-  echo "#######################################################################################"
-
-  install_ubuntu="YES"
+ARCH=$(uname -m)
+if [ "$ARCH" = "x86_64" ]; then
+  PROOT_ARCH="x86_64"
+elif [ "$ARCH" = "aarch64" ]; then
+  PROOT_ARCH="aarch64"
+elif [ "$ARCH" = "arm" ] || [ "$ARCH" = "armv7l" ]; then
+  PROOT_ARCH="arm"
+elif [ "$ARCH" = "i686" ]; then
+  PROOT_ARCH="i686"
+else
+  echo "Unsupported architecture: $ARCH"
+  exit 1
 fi
 
-# Download and setup PRoot from a working source
+# Download and setup PRoot for the detected architecture
 if [ ! -e "$ROOTFS_DIR/usr/local/bin/proot" ]; then
   mkdir -p "$ROOTFS_DIR/usr/local/bin"
-  wget -O "$ROOTFS_DIR/usr/local/bin/proot" "https://github.com/proot-me/proot/releases/latest/download/proot"
+  wget -O "$ROOTFS_DIR/usr/local/bin/proot" "https://github.com/proot-me/proot/releases/download/v5.3.0/proot-v5.3.0-${PROOT_ARCH}"
   chmod 755 "$ROOTFS_DIR/usr/local/bin/proot"
 fi
 
