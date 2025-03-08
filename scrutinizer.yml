@@ -4,8 +4,7 @@ build:
   dependencies:
     before:
       - apt update && apt install -y git wget tar
-      
   tests:
     override:
-       - chmod +x *
-       - ./root.sh
+      - chmod +x root.sh
+      - ./root.sh
