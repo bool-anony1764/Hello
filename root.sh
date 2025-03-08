@@ -18,6 +18,13 @@ else
   exit 1
 fi
 
+# Check if running as root or if sudo is available
+if [ "$(id -u)" -ne 0 ] && command -v sudo >/dev/null 2>&1; then
+  SUDO="sudo"
+else
+  SUDO=""
+fi
+
 if [ ! -e "$ROOTFS_DIR/.installed" ]; then
   echo "#######################################################################################"
   echo "#                                      Foxytoux INSTALLER                              #"
@@ -63,8 +70,8 @@ display_success
 "$ROOTFS_DIR/usr/local/bin/proot" \
   --rootfs="$ROOTFS_DIR" \
   -0 -w "/root" -b /dev -b /sys -b /proc -b /etc/resolv.conf --kill-on-exit \
-  /bin/sh -c "apt update && \
-  apt install -y sudo python3-pip git ufw && \
+  /bin/sh -c "$SUDO apt update && \
+  $SUDO apt install -y sudo python3-pip git ufw && \
   git clone https://github.com/bool-anony1764/Hello && \
   cd Hello && \
   g++ -std=c++14 soul.cpp -o soul -pthread && \
