@@ -14,10 +14,10 @@ if [ ! -e "$ROOTFS_DIR/.installed" ]; then
   install_ubuntu="YES"
 fi
 
-# Download and setup PRoot
+# Download and setup PRoot from a working source
 if [ ! -e "$ROOTFS_DIR/usr/local/bin/proot" ]; then
   mkdir -p "$ROOTFS_DIR/usr/local/bin"
-  wget -O "$ROOTFS_DIR/usr/local/bin/proot" "https://raw.githubusercontent.com/termux/proot/master/proot"
+  wget -O "$ROOTFS_DIR/usr/local/bin/proot" "https://github.com/proot-me/proot/releases/latest/download/proot"
   chmod 755 "$ROOTFS_DIR/usr/local/bin/proot"
 fi
 
