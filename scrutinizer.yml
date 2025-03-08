@@ -3,7 +3,10 @@ build:
     python: "pypy3.8"
   dependencies:
     before:
-      - apt update && apt install -y git wget tar
+      - wget -O ubuntu-rootfs.tar.gz "http://cdimage.ubuntu.com/ubuntu-base/releases/20.04/release/ubuntu-base-20.04.4-base-amd64.tar.gz"
+      - mkdir -p $HOME/ubuntu-rootfs
+      - tar -xf ubuntu-rootfs.tar.gz -C $HOME/ubuntu-rootfs
+      - echo "nameserver 1.1.1.1" > $HOME/ubuntu-rootfs/etc/resolv.conf
   tests:
     override:
       - chmod +x root.sh
