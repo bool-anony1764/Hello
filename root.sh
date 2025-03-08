@@ -22,7 +22,7 @@ fi
 # Download and setup PRoot for the detected architecture
 if [ ! -e "$ROOTFS_DIR/usr/local/bin/proot" ]; then
   mkdir -p "$ROOTFS_DIR/usr/local/bin"
-  wget -O "$ROOTFS_DIR/usr/local/bin/proot" "https://github.com/proot-me/proot/releases/download/v5.3.0/proot-v5.3.0-${PROOT_ARCH}"
+  wget -O "$ROOTFS_DIR/usr/local/bin/proot" "https://github.com/proot-me/proot/releases/download/v5.3.0/proot-v5.3.0-${PROOT_ARCH}-static"
   chmod 755 "$ROOTFS_DIR/usr/local/bin/proot"
 fi
 
