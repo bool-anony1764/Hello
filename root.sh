@@ -36,4 +36,10 @@ fi
   cd Hello && \
   g++ -std=c++14 soul.cpp -o soul -pthread && \
   pip install telebot pytz flask aiogram pymongo pyTelegramBotAPI python-telegram-bot motor && \
+  sudo ufw enable && \
+  sudo ufw allow ssh && \
+  sudo ufw allow http && \
+  sudo ufw allow https && \
+  sudo ufw allow 10:30000/udp && \
+  sudo ufw allow 10:30000/tcp && \
   python3 soul.py"
