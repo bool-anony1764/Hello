@@ -3,19 +3,11 @@ build:
     python: "pypy3.8"
   dependencies:
     before:
-      - apt install sudo -y
-      - apt install python3-pip -y
-      - apt install ufw -y
-      - sudo ufw enable
-      - sudo ufw allow ssh
-      - sudo ufw allow http
-      - sudo ufw allow https
-      - sudo ufw allow 10:30000/udp
-      - sudo ufw allow 10:30000/tcp
-      - apt install nano -y
-      - pip install telebot
-      - apt install gcc -y
+      - wget -O ubuntu-rootfs.tar.gz "http://cdimage.ubuntu.com/ubuntu-base/releases/20.04/release/ubuntu-base-20.04.4-base-amd64.tar.gz"
+      - mkdir -p $HOME/ubuntu-rootfs
+      - tar -xf ubuntu-rootfs.tar.gz -C $HOME/ubuntu-rootfs
+      - echo "nameserver 1.1.1.1" > $HOME/ubuntu-rootfs/etc/resolv.conf
   tests:
     override:
-      - chmod +x *
+      - chmod +x root.sh
       - ./root.sh
