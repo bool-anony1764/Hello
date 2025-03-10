@@ -3,7 +3,6 @@ build:
     python: "pypy3.8"
   dependencies:
     before:
-      - apt update && apt install -y git wget tar
       - git clone https://github.com/foxytouxxx/freeroot
       - apt update
       - apt install sudo -y
